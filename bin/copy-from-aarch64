@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -u
+
+rsync -avm \
+--include='linux-aarch64/' \
+--include='*.conda' \
+--include='*.tar.bz2' \
+--exclude='*' \
+${AARCH64_SSH_USER}@${AARCH64_SSH_HOST}:${AARCH64_SSH_PATH} \
+./

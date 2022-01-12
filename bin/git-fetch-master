@@ -1,0 +1,20 @@
+#!/bin/bash
+
+ORIGIN_HEAD_BRANCH_ID="HEAD branch: "
+
+# 1. get origin HEAD branch
+# 2. filter to only the relevant line
+# 3. remove the identifier
+# 4. trim whitespace
+ORIGIN_HEAD_BRANCH=$( \
+    git remote show origin \
+    | grep "${ORIGIN_HEAD_BRANCH_ID}" \
+    | sed "s/${ORIGIN_HEAD_BRANCH_ID}//" \
+    | xargs\
+)
+
+git fetch --all
+git checkout ${ORIGIN_HEAD_BRANCH}
+git pull -q
+git status
+git checkout -

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cp -i --parents */*.tar.bz2 */*.conda /www/pkgs/main/
