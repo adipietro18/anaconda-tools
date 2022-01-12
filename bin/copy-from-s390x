@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -u
+
+rsync -avm \
+--include='linux-s390x/' \
+--include='*.conda' \
+--include='*.tar.bz2' \
+--exclude='*' \
+${S390X_SSH_USER}@${S390X_SSH_HOST}:${S390X_SSH_PATH} \
+./

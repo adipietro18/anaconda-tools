@@ -1,0 +1,100 @@
+#!/bin/bash
+
+set -u
+
+usage ()
+{
+    # 
+    echo "Testing..."
+    echo "Usage: prefect-rsync [options...] <package names>"
+    echo " -d, --date           date folder to look under /ci/prefect"
+    echo " -n, --dry-run        run in dry-run mode"
+    echo " -v, --verbose        include helpful debug logging"
+    echo " -h, --help           show this help message and exit"
+    echo " <package names>      package names to rsync"
+}
+
+# parse command line arguments...
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case ${1} in
+    -h | --help )  # display help / usage
+        usage
+        exit
+        ;;
+    -d | --date )
+        shift
+        date_dir="${1}"
+        shift
+        ;;
+    -n | --dry-run )
+        dry_run_flag="--dry-run"
+        shift
+        ;;
+    -v | --verbose )
+        verbose_mode=1
+        shift
+        ;;
+    *)    # positional arguments are the package names
+      POSITIONAL+=("${1}") # save it in an array for later
+      shift
+      ;;
+  esac
+done
+
+# set defaults if these are not set
+date_dir="${date_dir:-$(date +%Y%m%d)}"
+dry_run_flag="${dry_run_flag:-}"
+verbose_mode="${verbose_mode:-0}"
+
+if [ "${#POSITIONAL[@]}" -eq 0 ]; then
+    POSITIONAL=("")
+fi
+
+include_packages=()
+for package in "${POSITIONAL[@]}"; do
+    include_packages+=( --include="${package}*.tar.bz2" )
+    include_packages+=( --include="${package}*.conda" )
+done
+
+print_args ()
+{
+    echo "Date folder to look in: ${date_dir}"
+    echo "Dry run flag: ${dry_run_flag}"
+    echo "Package names: ${include_packages[@]}"
+}
+
+rsync_packages ()
+{
+    rsync -avm \
+    --include='linux-aarch64/' \
+    --include='linux-s390x/' \
+    --include='osx-arm64/' \
+    "${include_packages[@]}" \
+    --exclude='*' \
+    ${dry_run_flag} \
+    /ci/prefect/${date_dir}/ \
+    ./
+}
+
+set_permissions ()
+{
+    sudo chown -R ci:ci linux-*/ osx-*/
+    sudo chmod 644 linux-*/*
+    sudo chmod 2755 linux-*
+}
+
+main ()
+{
+    if [[ "${verbose_mode}" -ne 0 ]]; then
+        print_args
+    fi
+
+    rsync_packages
+
+    if [[ -z "${dry_run_flag}" ]]; then
+        set_permissions
+    fi
+}
+
+main

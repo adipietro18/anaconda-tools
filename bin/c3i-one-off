@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set -u
+
+usage ()
+{
+    # 
+    echo "Usage: c3i-one-off [options...] <feedstock> <version>"
+    echo " -b, --build          pipeline build number"
+    echo " -h, --help           show this help message and exit"
+    echo "     --no-remove      do not remove the prior pipeline"
+    echo " -v, --verbose        include helpful debug logging"
+    echo " <feedstock>          feedstock to build"
+    echo " <version>            version being built"
+}
+
+# parse command line arguments...
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case ${1} in
+    -h | --help )  # display help / usage
+        usage
+        exit
+        ;;
+    -b | --build )
+        shift
+        build_number="${1}"
+        shift
+        ;;
+    -v | --verbose )
+        verbose_mode=1
+        shift
+        ;;
+    --no-remove )
+        no_remove_prior=1
+        shift
+        ;;
+    *)    # positional arguments are the package names
+      POSITIONAL+=("${1}") # save it in an array for later
+      shift
+      ;;
+  esac
+done
+
+if [ "${#POSITIONAL[@]}" -ne 2 ]; then
+    echo "Incorrect number of arguments!"
+    usage
+    exit 1
+fi
+
+feedstock="${POSITIONAL[0]}"
+version="${POSITIONAL[1]}"
+
+# set defaults if these are not set
+build_number="${build_number:-0}"
+pipeline_name="agd-${feedstock///}-${version}-${build_number}"
+verbose_mode="${verbose_mode:-0}"
+no_remove_prior="${no_remove_prior:-0}"
+
+print_args ()
+{
+    echo "Feedstock: ${feedstock}"
+    echo "Version: ${version}"
+    echo "Pipeline build number: ${build_number}"
+    echo "Pipeline name: ${pipeline_name}"
+}
+
+check_for_c3i ()
+{
+    which c3i > /dev/null
+    if [[ "${?}" -ne 0 ]]; then
+        echo "Please make sure c3i is on the PATH, locatable, or is conda activated"
+        exit 1
+    fi
+}
+
+main ()
+{
+    if [[ "${verbose_mode}" -ne 0 ]]; then
+        print_args
+    fi
+    
+    check_for_c3i
+    
+    pushd /Users/adipietro/shared/recipes/aggregate > /dev/null
+        if [[ "${no_remove_prior}" -eq 0 ]]; then
+            c3i rm -y "${pipeline_name}"
+        fi
+        c3i one-off "${pipeline_name}" "${feedstock}"
+    popd > /dev/null
+}
+
+main
