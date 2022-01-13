@@ -42,9 +42,7 @@ func RunCopyFrom(parameters CopyFromParameters, source SshLocation) error {
 
 	fmt.Println("Running: " + command.String())
 
-	err := command.Run()
-
-	if err != nil {
+	if err := command.Run(); err != nil {
 		fmt.Println(errBytes.String())
 		return err
 	}
@@ -55,8 +53,7 @@ func RunCopyFrom(parameters CopyFromParameters, source SshLocation) error {
 }
 
 func ValidateParameters(parameters CopyFromParameters) error {
-	err := validatePlatform(parameters.Platform)
-	if err != nil {
+	if err := validatePlatform(parameters.Platform); err != nil {
 		return err
 	}
 	return nil
@@ -137,8 +134,7 @@ func main() {
 
 	parameters := CopyFromParameters{DryRun: dryRun, Platform: normalizePlatform(flag.Arg(0))}
 
-	err := ValidateParameters(parameters)
-	if err != nil {
+	if err := ValidateParameters(parameters); err != nil {
 		flag.Usage()
 		os.Exit(1)
 	}
