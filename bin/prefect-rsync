@@ -4,14 +4,11 @@ set -u
 
 usage ()
 {
-    # 
-    echo "Testing..."
-    echo "Usage: prefect-rsync [options...] <package names>"
-    echo " -d, --date           date folder to look under /ci/prefect"
+    echo "Usage: prefect-rsync [options...] <prefect directory>"
     echo " -n, --dry-run        run in dry-run mode"
     echo " -v, --verbose        include helpful debug logging"
     echo " -h, --help           show this help message and exit"
-    echo " <package names>      package names to rsync"
+    echo " <prefect directory>  feedstock PR to copy from"
 }
 
 # parse command line arguments...
@@ -21,11 +18,6 @@ while [[ $# -gt 0 ]]; do
     -h | --help )  # display help / usage
         usage
         exit
-        ;;
-    -d | --date )
-        shift
-        date_dir="${1}"
-        shift
         ;;
     -n | --dry-run )
         dry_run_flag="--dry-run"
@@ -43,25 +35,26 @@ while [[ $# -gt 0 ]]; do
 done
 
 # set defaults if these are not set
-date_dir="${date_dir:-$(date +%Y%m%d)}"
 dry_run_flag="${dry_run_flag:-}"
 verbose_mode="${verbose_mode:-0}"
 
-if [ "${#POSITIONAL[@]}" -eq 0 ]; then
-    POSITIONAL=("")
+if [ "${#POSITIONAL[@]}" -ne 1 ]; then
+    echo "ERROR: invalid number of arguments: expected 1, recieved ${#POSITIONAL[@]}"
+    usage
+    exit 1
 fi
 
-include_packages=()
-for package in "${POSITIONAL[@]}"; do
-    include_packages+=( --include="${package}*.tar.bz2" )
-    include_packages+=( --include="${package}*.conda" )
-done
+prefect_directory="${POSITIONAL[0]}"
+
+if [ ! -d ${prefect_directory} ]; then
+    echo "prefect-rsync: ${prefect_directory}: No such file or directory"
+    exit 1
+fi
 
 print_args ()
 {
-    echo "Date folder to look in: ${date_dir}"
+    echo "Prefect folder to look in: ${prefect_directory}"
     echo "Dry run flag: ${dry_run_flag}"
-    echo "Package names: ${include_packages[@]}"
 }
 
 rsync_packages ()
@@ -70,10 +63,11 @@ rsync_packages ()
     --include='linux-aarch64/' \
     --include='linux-s390x/' \
     --include='osx-arm64/' \
-    "${include_packages[@]}" \
+    --include='*.tar.bz2' \
+    --include='*.conda' \
     --exclude='*' \
     ${dry_run_flag} \
-    /ci/prefect/${date_dir}/ \
+    ${prefect_directory} \
     ./
 }
 
