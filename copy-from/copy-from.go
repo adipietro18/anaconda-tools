@@ -21,7 +21,7 @@ type SshLocation struct {
 	Path string
 }
 
-func RunCopyFrom(parameters CopyFromParameters, source SshLocation) error {
+func BuildRsyncCommand(parameters CopyFromParameters, source SshLocation) string {
 	var commandBuilder strings.Builder
 	commandBuilder.WriteString("rsync -amv")
 	if parameters.DryRun {
@@ -33,23 +33,7 @@ func RunCopyFrom(parameters CopyFromParameters, source SshLocation) error {
 	commandBuilder.WriteString(" --exclude='*'")
 	commandBuilder.WriteString(fmt.Sprintf(" %s@%s:%s", source.User, source.Host, source.Path))
 	commandBuilder.WriteString(" ./")
-
-	command := exec.Command("bash", "-c", commandBuilder.String())
-
-	var outBytes, errBytes bytes.Buffer
-	command.Stdout = &outBytes
-	command.Stderr = &errBytes
-
-	fmt.Println("Running: " + command.String())
-
-	if err := command.Run(); err != nil {
-		fmt.Println(errBytes.String())
-		return err
-	}
-
-	fmt.Println(outBytes.String())
-
-	return nil
+	return commandBuilder.String()
 }
 
 func ValidateParameters(parameters CopyFromParameters) error {
@@ -145,10 +129,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = RunCopyFrom(parameters, source); err != nil {
-		fmt.Println(err)
+	command := exec.Command("bash", "-c", BuildRsyncCommand(parameters, source))
+
+	var outBytes, errBytes bytes.Buffer
+	command.Stdout = &outBytes
+	command.Stderr = &errBytes
+
+	fmt.Println("Running: " + command.String())
+
+	if err := command.Run(); err != nil {
+		fmt.Println(errBytes.String())
 		os.Exit(1)
 	}
+
+	fmt.Println(outBytes.String())
 
 	os.Exit(0)
 }
